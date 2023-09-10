@@ -17,6 +17,7 @@ battletoad_and_double_dragon = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['Y'], ['
 draculax_actions = []
 bloodlines_actions = []
 castlevania4_actions = []
+penalty_scale = 1000
 
 # The exploration parameter used to select random actions
 EXPLORATION_PARAM = 0.0025
@@ -120,12 +121,11 @@ def select_actions(root, action_space, max_episode_steps):
             # let's look ahead to see if there is a negative reward coming up
             # if there is, then we will give it a random chance to explore another path
             epsilon_boost = 0
-            if node.max_reward > 0:
-                upcoming_reward = look_ahead(node, node.max_reward)
-                if upcoming_reward < 0:
-                        # bump up the exploration parameter
-                        epsilon_boost = abs(upcoming_reward)/1000
-                        print(f'\x1B[35mupcoming_reward < 0 {upcoming_reward} bumping epsilon to {epsilon_boost}\x1B[0m')
+
+            upcoming_reward = look_ahead(node, node.max_reward)
+            if upcoming_reward < 0:
+                    # bump up the exploration parameter
+                    epsilon_boost = abs(upcoming_reward)/penalty_scale
 
             # calculate the epsilon value for this node
             epsilon = EXPLORATION_PARAM / np.log(node.visits + 2) + epsilon_boost
@@ -300,8 +300,12 @@ def grimm_runner(
     state=retro.State.DEFAULT,
     scenario=None,
     discretizer=None,
+    record_path=None,
+    penalty_scale_arg=1000
 ):
-    print(f'\x1B[34mRunning grimm_runner with game {game} and max_episode_steps {max_episode_steps}\x1B[0m')
+    global penalty_scale
+    penalty_scale = penalty_scale_arg
+    print(f'\x1B[34m\x1B[3mRunning grimm_runner with game {game} and max_episode_steps {max_episode_steps}\x1B[0m')
     env = retro.make(game, state, scenario=scenario)
     env = discretizer(env)
     env = Frameskip(env)
@@ -322,7 +326,7 @@ def grimm_runner(
 
             best_rew = rew
 
-            env.unwrapped.record_movie(f"./storage/gradius/look_ahead/best_{rew}_at_{timesteps}.bk2")
+            env.unwrapped.record_movie(f"./storage/{record_path}/best_{rew}_at_{timesteps}.bk2")
             env.reset()
             for act in actions:
                 env.step(act)
