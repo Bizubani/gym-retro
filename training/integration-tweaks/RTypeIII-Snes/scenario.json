@@ -3,7 +3,7 @@
     "variables": {
       "lives": {
         "op": "equal",
-        "reference": -1
+        "reference": 1
       }
     }
   },
