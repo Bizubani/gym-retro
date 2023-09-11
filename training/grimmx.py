@@ -17,7 +17,7 @@ battletoad_and_double_dragon = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['Y'], ['
 draculax_actions = []
 bloodlines_actions = []
 castlevania4_actions = []
-penalty_scale = 1000
+penalty_scale = None
 
 # The exploration parameter used to select random actions
 EXPLORATION_PARAM = 0.0025
@@ -131,7 +131,10 @@ def select_actions(root, action_space, max_episode_steps):
             epsilon = EXPLORATION_PARAM / np.log(node.visits + 2) + epsilon_boost
             # roll the dice to see if we take a random action
             if random.random() < epsilon:
-                print(f'\x1B[33mTaking random action with epsilon {epsilon} and epsilon boost {epsilon_boost}. There have been {node.visits} visits\x1B[0m')
+                if(epsilon_boost > 0):
+                    print(f'\x1B[36mTaking random action with epsilon boost {epsilon_boost}. There have been {node.visits} visits. \nUpcoming penalty is {upcoming_reward} and max reward on this path is: {node.max_reward}\x1B[0m')
+                else:
+                    print(f'\x1B[32mTaking random action. There have been {node.visits} visits to this node\x1B[0m')
                 # select an action at random
                 next_action = return_action(action_space)
             else:
@@ -326,7 +329,7 @@ def grimm_runner(
 
             best_rew = rew
 
-            env.unwrapped.record_movie(f"./storage/{record_path}/best_{rew}_at_{timesteps}.bk2")
+            env.unwrapped.record_movie(f"{record_path}/best_{rew}_at_{timesteps}.bk2")
             env.reset()
             for act in actions:
                 env.step(act)
