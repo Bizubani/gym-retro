@@ -3,10 +3,13 @@ import argparse
 import retro
 
 from utilities.keys_extractor import ButtonExtractor
-from utilities.discretizer import GradiusDiscretizer, BattletoadsDiscretizer
+from utilities.discretizer import GradiusDiscretizer, BattletoadsDiscretizer, RTypeDiscretizer, DraculaXDiscretizer
 import grimmx
 gradius_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['UP', 'B'], ['DOWN', 'B'], ['LEFT', 'B'], ['RIGHT', 'B'], ['B'], ['A']]
 battletoad_and_double_dragon_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['Y'], ['B'], ['LEFT', 'B'], ['RIGHT', 'B'], ['B', 'Y'], ['LEFT', 'Y'], ['RIGHT', 'Y']]
+rtype_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['A', 'B'], ['Y'], ['X'], ['LEFT', 'X'], ['RIGHT', 'X'], ['UP', 'X'], ['DOWN', 'X']]
+draculax_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['Y'], ['B'], ['X'], ['LEFT', 'B'], ['RIGHT', 'B'], ['UP', 'Y'], ['LEFT', 'Y'], ['RIGHT', 'Y'], ['DOWN', 'Y']]
+
 
 def main():
   
@@ -33,6 +36,14 @@ def main():
         game = 'FinalFight2-Snes'
     elif args.game == 'double_dragon':
         game = 'SuperDoubleDragon-Snes'
+    elif args.game == 'rtype':
+        game = 'RTypeIII-Snes'
+        action_set = rtype_actions
+        discretizer = RTypeDiscretizer
+    elif args.game == 'draculax':
+        game = 'CastlevaniaDraculaX-Snes'
+        discretizer = DraculaXDiscretizer
+        action_set = draculax_actions
     else:
         print('\x1B[3mGame not recognized\x1B[0m')
         exit(1)

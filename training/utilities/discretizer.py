@@ -3,6 +3,8 @@ import numpy as np
 
 gradius_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['UP', 'B'], ['DOWN', 'B'], ['LEFT', 'B'], ['RIGHT', 'B'], ['B'], ['A']]
 battletoad_and_double_dragon = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['Y'], ['B'], ['LEFT', 'B'], ['RIGHT', 'B'], ['B', 'Y'], ['LEFT', 'Y'], ['RIGHT', 'Y']]
+rtype_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['A', 'B'], ['Y'], ['X'], ['LEFT', 'X'], ['RIGHT', 'X'], ['UP', 'X'], ['DOWN', 'X']]
+draculax_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['Y'], ['B'], ['X'], ['LEFT', 'B'], ['RIGHT', 'B'], ['UP', 'Y'], ['LEFT', 'Y'], ['RIGHT', 'Y'], ['DOWN', 'Y']]
 
 class Discretizer(gym.ActionWrapper):
     """
@@ -47,4 +49,22 @@ class BattletoadsDiscretizer(Discretizer):
     """
     def __init__(self, env):
         super().__init__(env=env, combos=battletoad_and_double_dragon)
+
+class RTypeDiscretizer(Discretizer):
+    """
+    Use Battletoads and Double Dragon-specific discrete actions
+    based on
+     based on https://github.com/openai/retro-baselines/blob/master/agents/sonic_util.py
+    """
+    def __init__(self, env):
+        super().__init__(env=env, combos=rtype_actions)
+
+class DraculaXDiscretizer(Discretizer):
+    """
+    Use Battletoads and Double Dragon-specific discrete actions
+    based on
+     based on https://github.com/openai/retro-baselines/blob/master/agents/sonic_util.py
+    """
+    def __init__(self, env):
+        super().__init__(env=env, combos=draculax_actions)
    
