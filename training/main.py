@@ -4,7 +4,7 @@ import retro
 
 from utilities.keys_extractor import ButtonExtractor
 from utilities.discretizer import GradiusDiscretizer, BattletoadsDiscretizer, RTypeDiscretizer, DraculaXDiscretizer
-import grimmx
+import grimm_x as johan
 gradius_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['UP', 'B'], ['DOWN', 'B'], ['LEFT', 'B'], ['RIGHT', 'B'], ['B'], ['A']]
 battletoad_and_double_dragon_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['Y'], ['B'], ['LEFT', 'B'], ['RIGHT', 'B'], ['B', 'Y'], ['LEFT', 'Y'], ['RIGHT', 'Y']]
 rtype_actions = [['LEFT'], ['RIGHT'], ['UP'], ['DOWN'], ['A', 'B'], ['Y'], ['X'], ['LEFT', 'X'], ['RIGHT', 'X'], ['UP', 'X'], ['DOWN', 'X']]
@@ -54,7 +54,7 @@ def main():
         extractor = ButtonExtractor(args.file_to_load, action_set)
         loaded_actions = extractor.get_actions_from_movie()
     #call the agent and have it set up itself
-    ia = grimmx.grimm_runner(game=game, state=args.state, scenario=args.scenario,
+    ia = johan.grimm_runner(game=game, state=args.state, scenario=args.scenario,
                               discretizer=discretizer, record_path=args.record_path,
                               loaded_actions=loaded_actions, penalty_scale_arg=int(args.penalty_scale),
                                 max_episode_steps=int(args.episode_steps), timestep_limit=int(float(args.time_step_limit)
