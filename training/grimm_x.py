@@ -11,34 +11,6 @@ import math
 import retro
 import gym
 
-# The actions that we will use to play the supported games
-gradius_actions = [
-    ["LEFT"],
-    ["RIGHT"],
-    ["UP"],
-    ["DOWN"],
-    ["UP", "B"],
-    ["DOWN", "B"],
-    ["LEFT", "B"],
-    ["RIGHT", "B"],
-    ["B"],
-    ["A"],
-]
-battletoad_and_double_dragon = [
-    ["LEFT"],
-    ["RIGHT"],
-    ["UP"],
-    ["DOWN"],
-    ["Y"],
-    ["B"],
-    ["LEFT", "B"],
-    ["RIGHT", "B"],
-    ["B", "Y"],
-    ["LEFT", "Y"],
-    ["RIGHT", "Y"],
-]
-draculax_actions = []
-bloodlines_actions = []
 castlevania4_actions = []
 penalty_scale = None
 
@@ -143,7 +115,13 @@ and the maximum number of steps to take.
 """
 
 
-def select_actions(root, action_space, max_episode_steps, longest_path):
+def select_actions(
+    root,
+    action_space,
+    max_episode_steps,
+    longest_path,
+    top_rewards,
+):
     # start at the root node
     node = root
     actions = []
@@ -157,15 +135,17 @@ def select_actions(root, action_space, max_episode_steps, longest_path):
             # let's look ahead to see if there is a negative reward coming up
             # if there is, then we will give it a random chance to explore another path
             epsilon_boost = 0
-
-            upcoming_reward, distance_ahead = look_ahead(node, node.max_reward)
-            if upcoming_reward < 0:
-                # bump up the exploration parameter
-                epsilon_boost = abs(upcoming_reward) / penalty_scale
-                # scale it by how deep in the tree we are, but only up to the
-                # longest path we've seen so far
-                if steps < longest_path:
-                    epsilon_boost = epsilon_boost * steps / longest_path
+            # however, only look ahead if we are on a path with a good chance of
+            # getting a high reward
+            if node.max_reward in top_rewards:
+                upcoming_reward, distance_ahead = look_ahead(node, node.max_reward)
+                if upcoming_reward < 0:
+                    # bump up the exploration parameter
+                    epsilon_boost = abs(upcoming_reward) / penalty_scale
+                    # scale it by how deep in the tree we are, but only up to the
+                    # longest path we've seen so far
+                    if steps < longest_path:
+                        epsilon_boost = epsilon_boost * steps / longest_path
 
             # calculate the epsilon value for this node
             epsilon = EXPLORATION_PARAM / np.log(node.visits + 2) + epsilon_boost
@@ -347,6 +327,11 @@ class Grimm_Johan:
         self._max_episode_steps = max_episode_steps
         self._actions = actions
         self.longest_path = 0
+        self.top_scores = [
+            -np.inf,
+            -np.inf,
+            -np.inf,
+        ]
         if self._actions is not None:
             self.load_actions()
 
@@ -357,8 +342,13 @@ class Grimm_Johan:
         executed_actions = actions[:steps]
         self.longest_path = steps
         print("\x1B[1mLoaded actions, now updating path...\x1B[0m")
+        self.update_top_rewards(total_reward)
         self.node_count += update_path(
-            self._root, executed_actions, rewards, total_reward, loaded=True
+            self._root,
+            executed_actions,
+            rewards,
+            total_reward,
+            loaded=True,
         )
         print(
             f"\x1B[34mInitial info: nodes: {self.node_count}, reward from saved input: {total_reward}!\x1B[0m"
@@ -370,6 +360,7 @@ class Grimm_Johan:
             self._env.action_space,
             self._max_episode_steps,
             self.longest_path,
+            top_rewards=self.top_scores,
         )
         steps, rewards, total_reward = perform_actions(self._env, actions)
         if steps > self.longest_path:
@@ -378,10 +369,19 @@ class Grimm_Johan:
                 f"\x1B[32m\x1B[1m\x1B[3mNew longest path: {self.longest_path}!\x1B[0m"
             )
         executed_actions = actions[:steps]
+        self.update_top_rewards(total_reward)
         self.node_count += update_path(
-            self._root, executed_actions, rewards, total_reward
+            self._root,
+            executed_actions,
+            rewards,
+            total_reward,
         )
         return executed_actions, total_reward
+
+    def update_top_rewards(self, reward):
+        if reward > min(self.top_scores) and reward not in self.top_scores:
+            self.top_scores[self.top_scores.index(min(self.top_scores))] = reward
+            print(f"\x1B[35m\x1B[1m\x1B[3mNew top rewards: {self.top_scores}\x1B[0m")
 
 
 def grimm_runner(
@@ -437,4 +437,10 @@ def grimm_runner(
 
         if timesteps > timestep_limit:
             print("timestep limit exceeded")
+            print("\x1B[3m\x1B[1mHere are the stats of the execution:\x1B[0m")
+            print(f"\x1B[34m\x1B[3mBest reward: {best_rew}")
+            print(f"Total timesteps: {timesteps}")
+            print(f"Longest path: {johan.longest_path} steps")
+            print(f"Total nodes: {johan.node_count}")
+            print(f"\x1B[34m\x1B[3mTop scores: {johan.top_scores}\x1B[0m")
             break
