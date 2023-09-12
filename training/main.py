@@ -8,8 +8,11 @@ from utilities.discretizer import (
     BattletoadsDiscretizer,
     RTypeDiscretizer,
     DraculaXDiscretizer,
+    FinalFight2Discretizer,
+    DoubleDragonDiscretizer,
 )
 import grimm_x as johan
+import grimm_p.grimm_p as sebastian
 
 # the directory of the script being run
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -36,8 +39,6 @@ battletoad_and_double_dragon_actions = [
     ["LEFT", "B"],
     ["RIGHT", "B"],
     ["B", "Y"],
-    ["LEFT", "Y"],
-    ["RIGHT", "Y"],
 ]
 rtype_actions = [
     ["LEFT"],
@@ -62,10 +63,30 @@ draculax_actions = [
     ["X"],
     ["LEFT", "B"],
     ["RIGHT", "B"],
-    ["UP", "Y"],
-    ["LEFT", "Y"],
-    ["RIGHT", "Y"],
-    ["DOWN", "Y"],
+]
+final_fight_2_actions = [
+    ["LEFT"],
+    ["RIGHT"],
+    ["UP"],
+    ["DOWN"],
+    ["Y"],
+    ["LEFT", "B"],
+    ["RIGHT", "B"],
+    ["B"],
+]
+
+double_dragon_actions = [
+    ["LEFT"],
+    ["RIGHT"],
+    ["UP"],
+    ["DOWN"],
+    ["Y"],
+    ["B"],
+    ["LEFT", "B"],
+    ["RIGHT", "B"],
+    ["X"],
+    ["A"],
+    ["L"],
 ]
 
 
@@ -87,6 +108,7 @@ def main():
     parser.add_argument("--penalty_scale", default=1000)
     parser.add_argument("--episode_steps", default=4500)
     parser.add_argument("--time_step_limit", default=1e7)
+    parser.add_argument("--grimm", default="johan")
     args = parser.parse_args()
     if args.game == "gradius":
         game = "GradiusIII-Snes"
@@ -96,10 +118,14 @@ def main():
         game = "BattletoadsDoubleDragon-Snes"
         discretizer = BattletoadsDiscretizer
         action_set = battletoad_and_double_dragon_actions
-    elif args.game == "final_fight":
+    elif args.game == "final_fight2":
         game = "FinalFight2-Snes"
+        discretizer = FinalFight2Discretizer
+        action_set = final_fight_2_actions
     elif args.game == "double_dragon":
         game = "SuperDoubleDragon-Snes"
+        discretizer = DoubleDragonDiscretizer
+        action_set = double_dragon_actions
     elif args.game == "rtype":
         game = "RTypeIII-Snes"
         action_set = rtype_actions
@@ -118,19 +144,33 @@ def main():
         extractor = ButtonExtractor(args.file_to_load, action_set)
         loaded_actions = extractor.get_actions_from_movie()
     # call the agent and have it set up itself
-    ia = johan.grimm_runner(
-        game=game,
-        state=args.state,
-        scenario=args.scenario,
-        discretizer=discretizer,
-        record_path=args.record_path,
-        loaded_actions=loaded_actions,
-        penalty_scale_arg=int(args.penalty_scale),
-        max_episode_steps=int(args.episode_steps),
-        timestep_limit=int(float(args.time_step_limit)),
-    )
-    print("Agent set up. Ready to run.")
-    ia.run()
+    if args.grimm == "johan":
+        johan.grimm_runner(
+            game=game,
+            state=args.state,
+            scenario=args.scenario,
+            discretizer=discretizer,
+            record_path=args.record_path,
+            loaded_actions=loaded_actions,
+            penalty_scale_arg=int(args.penalty_scale),
+            max_episode_steps=int(args.episode_steps),
+            timestep_limit=int(float(args.time_step_limit)),
+        )
+    elif args.grimm == "sebastian":
+        sebastian.grimm_runner(
+            game=game,
+            state=args.state,
+            scenario=args.scenario,
+            discretizer=discretizer,
+            record_path=args.record_path,
+            loaded_actions=loaded_actions,
+            penalty_scale_arg=int(args.penalty_scale),
+            max_episode_steps=int(args.episode_steps),
+            timestep_limit=int(float(args.time_step_limit)),
+        )
+    else:
+        print("\x1B[3mGrimm not recognized\x1B[0m")
+        exit(1)
 
 
 if __name__ == "__main__":
