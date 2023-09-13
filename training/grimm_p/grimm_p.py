@@ -241,7 +241,7 @@ def grimm_runner(
     record_path=None,
 ):
     print(
-        f"\x1B[34m\x1B[3mRunning Sebastian with game {game} and max_episode_steps {max_episode_steps}\x1B[0m"
+        f"\x1B[34m\x1B[3mRunning Sebastian with game {game} and playing {n_games} times\x1B[0m"
     )
     env = retro.make(game, state, scenario=scenario)
     env = discretizer(env)
