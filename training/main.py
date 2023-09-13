@@ -109,6 +109,7 @@ def main():
     parser.add_argument("--episode_steps", default=4500)
     parser.add_argument("--time_step_limit", default=1e7)
     parser.add_argument("--grimm", default="johan")
+    parser.add_argument("--n_games", default=1000)
     args = parser.parse_args()
     if args.game == "gradius":
         game = "GradiusIII-Snes"
@@ -163,10 +164,7 @@ def main():
             scenario=args.scenario,
             discretizer=discretizer,
             record_path=args.record_path,
-            loaded_actions=loaded_actions,
-            penalty_scale_arg=int(args.penalty_scale),
-            max_episode_steps=int(args.episode_steps),
-            timestep_limit=int(float(args.time_step_limit)),
+            n_games=int(args.n_games),
         )
     else:
         print("\x1B[3mGrimm not recognized\x1B[0m")
