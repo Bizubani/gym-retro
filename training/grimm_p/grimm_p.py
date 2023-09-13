@@ -2,12 +2,14 @@
 An implementation of the PPO algorithm
 """
 import torch as T
-import actor_critic_network as ACN
+import grimm_p.actor_critic_network as ACN
 import numpy as np
-import replay_buffer as PPO
+import grimm_p.replay_buffer as PPO
 import gym
 import retro
-import cv2
+from gym.spaces import Box
+from gym.wrappers import FrameStack
+from torchvision import transforms as TV
 
 """
 Implementation of the Jerk algorithm with look ahead
@@ -16,43 +18,58 @@ Creates and manages the tree storing game actions and rewards
 """
 
 
-class Frameskip(gym.Wrapper):
-    def __init__(self, env, skip=4):
+class SkipFrame(gym.Wrapper):
+    def __init__(self, env, skip):
+        """Return only every `skip`-th frame"""
         super().__init__(env)
         self._skip = skip
 
-    def reset(self):
-        return self.env.reset()
-
-    def step(self, act):
+    def step(self, action):
+        """Repeat action, and sum reward"""
         total_reward = 0.0
-        done = None
         for i in range(self._skip):
-            obs, rew, done, info = self.env.step(act)
-            total_reward += rew
+            # Accumulate reward and repeat the same action
+            obs, reward, done, info = self.env.step(action)
+            total_reward += reward
             if done:
                 break
-
         return obs, total_reward, done, info
 
 
-class TimeLimit(gym.Wrapper):
-    def __init__(self, env, max_episode_steps=None):
+class GrayScaleObservation(gym.ObservationWrapper):
+    def __init__(self, env):
         super().__init__(env)
-        self._max_episode_steps = max_episode_steps
-        self._elapsed_steps = 0
+        obs_shape = self.observation_space.shape[:2]
+        self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
 
-    def step(self, ac):
-        observation, reward, done, info = self.env.step(ac)
-        self._elapsed_steps += 1
-        if self._elapsed_steps >= self._max_episode_steps:
-            done = True
-            info["TimeLimit.truncated"] = True
-        return observation, reward, done, info
+    def permute_orientation(self, observation):
+        # permute [H, W, C] array to [C, H, W] tensor
+        observation = np.transpose(observation, (2, 0, 1))
+        observation = T.tensor(observation.copy(), dtype=T.float)
+        return observation
 
-    def reset(self, **kwargs):
-        self._elapsed_steps = 0
-        return self.env.reset(**kwargs)
+    def observation(self, observation):
+        observation = self.permute_orientation(observation)
+        transform = TV.Grayscale()
+        observation = transform(observation)
+        return observation
+
+
+class ResizeObservation(gym.ObservationWrapper):
+    def __init__(self, env, shape):
+        super().__init__(env)
+        if isinstance(shape, int):
+            self.shape = (shape, shape)
+        else:
+            self.shape = tuple(shape)
+
+        obs_shape = self.shape + self.observation_space.shape[2:]
+        self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
+
+    def observation(self, observation):
+        transforms = TV.Compose([TV.Resize(self.shape), TV.Normalize(0, 255)])
+        observation = transforms(observation).squeeze(0)
+        return observation
 
 
 class Grimm_Sebastian:
@@ -60,6 +77,7 @@ class Grimm_Sebastian:
     # optionally receives a list of actions to loaded from a file
     def __init__(
         self,
+        game,
         n_actions,
         input_dims,
         gamma=0.99,
@@ -68,7 +86,7 @@ class Grimm_Sebastian:
         batch_size=64,
         N=2048,
         n_epochs=10,
-        alpha=0.0003,
+        alpha=0.00001,
     ):
         self.gamma = gamma
         self.gae_lambda = gae_lambda
@@ -79,11 +97,13 @@ class Grimm_Sebastian:
         self.alpha = alpha
         self.n_actions = n_actions
         self.actor = ACN.ActorNetwork(
+            game=game,
             n_actions=n_actions,
             input_dims=input_dims,
             alpha=alpha,
         )
         self.critic = ACN.CriticNetwork(
+            game=game,
             input_dims=input_dims,
             alpha=alpha,
         )
@@ -118,7 +138,13 @@ class Grimm_Sebastian:
     """
 
     def choose_action(self, observation):
-        state = T.tensor([observation], dtype=T.float).to(self.actor.device)
+        observation = (
+            observation[0].__array__()
+            if isinstance(observation, tuple)
+            else observation.__array__()
+        )
+        state = T.tensor(observation, device=self.actor.device).unsqueeze(0)
+
         # _, _, action_probs = self.actor.forward(state)
         # dist = Categorical(action_probs)
         # action = dist.sample()
@@ -197,44 +223,40 @@ class Grimm_Sebastian:
                 critic_loss = critic_loss.mean()
 
                 total_loss = actor_loss + 0.5 * critic_loss
-
+                # print learning stats
                 self.actor.optimizer.zero_grad()
                 self.critic.optimizer.zero_grad()
                 total_loss.backward()
                 self.actor.optimizer.step()
                 self.critic.optimizer.step()
-
         self.memory.clear_memory()
 
 
 def grimm_runner(
     game,
-    max_episode_steps=9000,
-    loaded_actions=None,
-    counter=0,
-    timestep_limit=2e7,
+    n_games=1000,
     state=retro.State.DEFAULT,
     scenario=None,
     discretizer=None,
     record_path=None,
-    penalty_scale_arg=1000,
 ):
-    global penalty_scale
-
-    penalty_scale = penalty_scale_arg
     print(
         f"\x1B[34m\x1B[3mRunning Sebastian with game {game} and max_episode_steps {max_episode_steps}\x1B[0m"
     )
     env = retro.make(game, state, scenario=scenario)
     env = discretizer(env)
-    env = Frameskip(env)
-    env = TimeLimit(env, max_episode_steps=max_episode_steps)
-    batch_size = 5
-    n_epochs = 4
-    alpha = 0.0003
-    N = 32
-    n_games = 200
+    env = SkipFrame(env, skip=4)
+    env = GrayScaleObservation(env)
+    env = ResizeObservation(env, shape=84)
+    env = FrameStack(env, num_stack=4)
+    # hyperparameters seleccted using stable baselines implementation settings
+    batch_size = 64
+    n_epochs = 10
+    alpha = 0.0001
+    N = 2048
+    n_games = n_games
     sebastian = Grimm_Sebastian(
+        game=game,
         n_actions=env.action_space.n,
         input_dims=env.observation_space.shape,
         batch_size=batch_size,
@@ -248,24 +270,19 @@ def grimm_runner(
     learn_iters = 0
     avg_score = 0
     n_steps = 0
+    actions = []
 
     timesteps = 0
     best_rew = float("-inf")
     for i in range(n_games):
         observation = env.reset()
-
-        inx, iny, inc = env.observation_space.shape
-        inx = int(inx / 8)
-        iny = int(iny / 8)
-
         done = False
+        timesteps += 1
         score = 0
         while not done:
-            observation = cv2.resize(observation, (inx, iny))
-            observation = cv2.cvtColor(observation, cv2.COLOR_BGR2GRAY)
-            observation = np.reshape(observation, (inx, iny))
-
+            # set the channel as last dimension
             action, logprob, value = sebastian.choose_action(observation=observation)
+            actions.append(action)
             n_steps += 1
             observation_, reward, done, info = env.step(action)
             score += reward
@@ -275,13 +292,26 @@ def grimm_runner(
                 learn_iters += 1
             observation = observation_
         score_history.append(score)
+        if score > best_rew:
+            print(
+                f"\x1B[3m\x1B[34mAccomplished new best score! {best_rew} => {score}\x1B[0m"
+            )
+            best_rew = score
+            env.unwrapped.record_movie(f"{record_path}/best_{best_rew}.bk2")
+            env.reset()
+            for act in actions:
+                env.step(act)
+            env.unwrapped.stop_record()
+
         avg_score = np.mean(score_history[-100:])
         if avg_score > best_score:
-            best_score = avg_score
+            print("Saving better models")
             sebastian.save_models()
+            best_score = avg_score
+        actions.clear()
         print(
-            f"episode {i} score {score:.1f} average score {avg_score:.1f} best score {best_score:.1f} "
-            f"learning_steps {learn_iters}, n_steps {n_steps}"
+            f"\x1B[3mepisode {i} score {score:.1f} average score {avg_score:.1f} best score {best_score:.1f} "
+            f"learning_steps {learn_iters}, n_steps {n_steps} and timesteps {timesteps}\x1B[0m"
         )
     # while True:
     #     actions, rew = sebastian.run()
