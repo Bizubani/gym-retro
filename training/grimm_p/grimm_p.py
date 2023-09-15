@@ -29,11 +29,17 @@ class SkipFrame(gym.Wrapper):
         total_reward = 0.0
         for i in range(self._skip):
             # Accumulate reward and repeat the same action
-            obs, reward, done, info = self.env.step(action)
+            if gym.__version__ < "0.26":
+                obs, reward, done, info = self.env.step(action)
+            else:
+                obs, reward, done, _, info = self.env.step(action)
             total_reward += reward
             if done:
                 break
-        return obs, total_reward, done, info
+        if gym.__version__ < "0.26":
+            return obs, total_reward, done, info
+        else:
+            return obs, total_reward, done, _, info
 
 
 class GrayScaleObservation(gym.ObservationWrapper):
@@ -87,6 +93,7 @@ class Grimm_Sebastian:
         N=2048,
         n_epochs=10,
         alpha=0.00001,
+        load_model=None,
     ):
         self.gamma = gamma
         self.gae_lambda = gae_lambda
@@ -96,6 +103,7 @@ class Grimm_Sebastian:
         self.N = N
         self.alpha = alpha
         self.n_actions = n_actions
+
         self.actor = ACN.ActorNetwork(
             game=game,
             n_actions=n_actions,
@@ -107,6 +115,11 @@ class Grimm_Sebastian:
             input_dims=input_dims,
             alpha=alpha,
         )
+        if load_model is not None:
+            # load the model from file
+
+            self.load_models(load_model)
+
         self.memory = PPO.PPOMemory(batch_size)
         self.learn_step_counter = 0
 
@@ -129,9 +142,9 @@ class Grimm_Sebastian:
     Load the model from file
     """
 
-    def load_models(self):
-        self.actor.load_checkpoint()
-        self.critic.load_checkpoint()
+    def load_models(self, model_to_load):
+        self.actor.load_checkpoint(model_to_load)
+        self.critic.load_checkpoint(model_to_load)
 
     """
     Choose an action to take
@@ -215,7 +228,7 @@ class Grimm_Sebastian:
                 actor_loss = (
                     -T.min(weighted_probs, weighted_clipped_probs).mean()
                     # not in the implementation I followed. Do we need this?
-                    # - 0.001 * dist.entropy().mean()
+                    - 0.001 * dist.entropy().mean()
                 )
 
                 returns = advantage[batch] + values[batch]
@@ -239,11 +252,26 @@ def grimm_runner(
     scenario=None,
     discretizer=None,
     record_path=None,
+    max_episode_steps=4500,
+    model_to_load=None,
+    use_custom_integrations=False,
 ):
     print(
-        f"\x1B[34m\x1B[3mRunning Sebastian with game {game} and playing {n_games} times\x1B[0m"
+        f"\x1B[34m\x1B[3mRunning Sebastian with game {game} and playing {n_games} times with max steps {max_episode_steps} per game"
+        f"\nIt {'is' if use_custom_integrations else 'is not'} using custom integrations\x1B[0m"
     )
-    env = retro.make(game, state, scenario=scenario)
+    if model_to_load is not None:
+        print(f"\x1B[3\x1B[33mLoading model from {model_to_load}\x1B[0m")
+    if use_custom_integrations:
+        integration_type = retro.data.Integrations.ALL
+    else:
+        integration_type = retro.data.Integrations.DEFAULT
+    env = retro.make(
+        game,
+        state,
+        scenario=scenario,
+        inttype=integration_type,
+    )
     env = discretizer(env)
     env = SkipFrame(env, skip=4)
     env = GrayScaleObservation(env)
@@ -263,10 +291,10 @@ def grimm_runner(
         N=N,
         n_epochs=n_epochs,
         alpha=alpha,
+        load_model=model_to_load,
     )
     best_score = env.reward_range[0]
     score_history = []
-
     learn_iters = 0
     avg_score = 0
     n_steps = 0
@@ -277,19 +305,28 @@ def grimm_runner(
     for i in range(n_games):
         observation = env.reset()
         done = False
-        timesteps += 1
         score = 0
-        while not done:
+        while not done and timesteps < max_episode_steps:
             # set the channel as last dimension
             action, logprob, value = sebastian.choose_action(observation=observation)
             actions.append(action)
             n_steps += 1
-            observation_, reward, done, info = env.step(action)
+            timesteps += 1
+            if gym.__version__ < "0.26":
+                observation_, reward, done, info = env.step(action)
+            else:
+                observation_, reward, done, _, info = env.step(action)
+            # only try to render if the gym version is 0.26 or above (uses stable-retro)
+            if gym.__version__ > "0.26":
+                env.render()
             score += reward
             sebastian.remember(observation, action, logprob, value, reward, done)
             if n_steps % sebastian.N == 0:
                 sebastian.learn()
                 learn_iters += 1
+                print(
+                    f"\x1B[3m\x1B[32mWe are on the {n_steps}th step and have completed {i} episodes.\nSebastain has been trained {learn_iters} times\x1B[0m"
+                )
             observation = observation_
         score_history.append(score)
         if score > best_rew:
@@ -313,6 +350,8 @@ def grimm_runner(
             f"\x1B[3mepisode {i} score {score:.1f} average score {avg_score:.1f} best score {best_score:.1f} "
             f"learning_steps {learn_iters}, n_steps {n_steps} and timesteps {timesteps}\x1B[0m"
         )
+        # reset the timestep counter
+        timesteps = 0
     # while True:
     #     actions, rew = sebastian.run()
     #     counter += 1

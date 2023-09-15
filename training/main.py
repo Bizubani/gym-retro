@@ -109,6 +109,8 @@ def main():
     parser.add_argument("--episode_steps", default=4500)
     parser.add_argument("--time_step_limit", default=1e7)
     parser.add_argument("--grimm", default="johan")
+    parser.add_argument("--model_to_load", default=None)
+    parser.add_argument("--use_custom_integrations", default=False)
     parser.add_argument("--n_games", default=1000)
     args = parser.parse_args()
     if args.game == "gradius":
@@ -165,6 +167,9 @@ def main():
             discretizer=discretizer,
             record_path=args.record_path,
             n_games=int(args.n_games),
+            max_episode_steps=int(args.episode_steps),
+            use_custom_integrations=args.use_custom_integrations == "True",
+            model_to_load=args.model_to_load,
         )
     else:
         print("\x1B[3mGrimm not recognized\x1B[0m")
