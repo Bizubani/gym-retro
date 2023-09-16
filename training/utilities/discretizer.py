@@ -73,6 +73,19 @@ double_dragon_actions = [
     ["L"],
 ]
 
+snes_actions = [
+    ["LEFT"],
+    ["RIGHT"],
+    ["UP"],
+    ["DOWN"],
+    ["Y"],
+    ["B"],
+    ["A"],
+    ["X"],
+    ["L"],
+    ["R"],
+]
+
 
 class Discretizer(gym.ActionWrapper):
     """
@@ -84,7 +97,8 @@ class Discretizer(gym.ActionWrapper):
 
     def __init__(self, env, combos):
         super().__init__(env)
-        assert isinstance(env.action_space, gym.spaces.MultiBinary)
+        # removed assertion to allow compatibility with gym > 26
+        # assert isinstance(env.action_space, gym.spaces.MultiBinary)
         buttons = env.unwrapped.buttons
         self._decode_discrete_action = []
         print(f"\x1B[32mAction space size is {env.action_space.n}\x1B[0m")
@@ -158,3 +172,14 @@ class DoubleDragonDiscretizer(Discretizer):
 
     def __init__(self, env):
         super().__init__(env=env, combos=double_dragon_actions)
+
+
+# provide a unified interface for all snes games
+class SnesDiscretizer(Discretizer):
+    """
+    Use Snes-specific discrete actions
+    based on ttps://github.com/openai/retro-baselines/blob/master/agents/sonic_util.py
+    """
+
+    def __init__(self, env):
+        super().__init__(env=env, combos=snes_actions)
