@@ -112,6 +112,7 @@ def main():
     parser.add_argument("--model_to_load", default=None)
     parser.add_argument("--use_custom_integrations", default=False)
     parser.add_argument("--n_games", default=1000)
+    parser.add_argument("--play_only", default=False)
     args = parser.parse_args()
     if args.game == "gradius":
         game = "GradiusIII-Snes"
@@ -170,6 +171,7 @@ def main():
             max_episode_steps=int(args.episode_steps),
             use_custom_integrations=args.use_custom_integrations == "True",
             model_to_load=args.model_to_load,
+            play_only=args.play_only == "True",
         )
     else:
         print("\x1B[3mGrimm not recognized\x1B[0m")
