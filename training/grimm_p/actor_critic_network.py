@@ -57,9 +57,10 @@ class ActorNetwork(nn.Module):
     # Load the model from file
     def load_checkpoint(self, model_to_load=None):
         if model_to_load is not None:
-            self.load_state_dict(T.load(model_to_load))
-        else:
-            self.load_state_dict(T.load(self.checkpoint_file))
+            if "actor" not in model_to_load:
+                model_to_load = model_to_load.replace("critic", "actor")
+            self.checkpoint_file = os.path.join("./grimm_p/temp/ppo", model_to_load)
+        self.load_state_dict(T.load(self.checkpoint_file))
 
 
 class CriticNetwork(nn.Module):
@@ -110,6 +111,7 @@ class CriticNetwork(nn.Module):
     # Load the model from file
     def load_checkpoint(self, model_to_load=None):
         if model_to_load is not None:
-            self.load_state_dict(T.load(model_to_load))
-        else:
-            self.load_state_dict(T.load(self.checkpoint_file))
+            if "critic" not in model_to_load:
+                model_to_load = model_to_load.replace("actor", "critic")
+            self.checkpoint_file = os.path.join("./grimm_p/temp/ppo", model_to_load)
+        self.load_state_dict(T.load(self.checkpoint_file))

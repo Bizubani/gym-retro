@@ -11,12 +11,6 @@ from gym.spaces import Box
 from gym.wrappers import FrameStack
 from torchvision import transforms as TV
 
-"""
-Implementation of the Jerk algorithm with look ahead
-
-Creates and manages the tree storing game actions and rewards
-"""
-
 
 class SkipFrame(gym.Wrapper):
     def __init__(self, env, skip):
@@ -73,7 +67,9 @@ class ResizeObservation(gym.ObservationWrapper):
         self.observation_space = Box(low=0, high=255, shape=obs_shape, dtype=np.uint8)
 
     def observation(self, observation):
-        transforms = TV.Compose([TV.Resize(self.shape), TV.Normalize(0, 255)])
+        transforms = TV.Compose(
+            [TV.Resize(self.shape, antialias=True), TV.Normalize(0, 255)]
+        )
         observation = transforms(observation).squeeze(0)
         return observation
 
@@ -255,6 +251,7 @@ def grimm_runner(
     max_episode_steps=4500,
     model_to_load=None,
     use_custom_integrations=False,
+    play_only=False,
 ):
     print(
         f"\x1B[34m\x1B[3mRunning Sebastian with game {game} and playing {n_games} times with max steps {max_episode_steps} per game"
@@ -304,6 +301,9 @@ def grimm_runner(
     best_rew = float("-inf")
     for i in range(n_games):
         observation = env.reset()
+        if gym.__version__ > "0.26":
+            # discard the map from the observation tuple
+            observation = observation[0]
         done = False
         score = 0
         while not done and timesteps < max_episode_steps:
@@ -321,7 +321,8 @@ def grimm_runner(
                 env.render()
             score += reward
             sebastian.remember(observation, action, logprob, value, reward, done)
-            if n_steps % sebastian.N == 0:
+            # only run this code if we are teaching the agent
+            if n_steps % sebastian.N == 0 and not play_only:
                 sebastian.learn()
                 learn_iters += 1
                 print(
