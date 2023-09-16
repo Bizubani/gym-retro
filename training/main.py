@@ -10,6 +10,7 @@ from utilities.discretizer import (
     DraculaXDiscretizer,
     FinalFight2Discretizer,
     DoubleDragonDiscretizer,
+    SnesDiscretizer,
 )
 import grimm_x as johan
 import grimm_p.grimm_p as sebastian
@@ -165,7 +166,7 @@ def main():
             game=game,
             state=args.state,
             scenario=args.scenario,
-            discretizer=discretizer,
+            discretizer=SnesDiscretizer,
             record_path=args.record_path,
             n_games=int(args.n_games),
             max_episode_steps=int(args.episode_steps),
