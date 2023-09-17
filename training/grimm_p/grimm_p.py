@@ -7,6 +7,7 @@ import numpy as np
 import grimm_p.replay_buffer as PPO
 import gym
 import retro
+import time
 from gym.spaces import Box
 from gym.wrappers import FrameStack
 from torchvision import transforms as TV
@@ -224,7 +225,7 @@ class Grimm_Sebastian:
                 actor_loss = (
                     -T.min(weighted_probs, weighted_clipped_probs).mean()
                     # not in the implementation I followed. Do we need this?
-                    - 0.001 * dist.entropy().mean()
+                    # - 0.001 * dist.entropy().mean()
                 )
 
                 returns = advantage[batch] + values[batch]
@@ -252,6 +253,7 @@ def grimm_runner(
     model_to_load=None,
     use_custom_integrations=False,
     play_only=False,
+    tag=None,
 ):
     print(
         f"\x1B[34m\x1B[3mRunning Sebastian with game {game} and playing {n_games} times with max steps {max_episode_steps} per game"
@@ -280,8 +282,11 @@ def grimm_runner(
     alpha = 0.0001
     N = 2048
     n_games = n_games
+    game_name = game + str(int(time.time()))
+    if tag is not None:
+        game_name += "_" + tag
     sebastian = Grimm_Sebastian(
-        game=game,
+        game=game_name,
         n_actions=env.action_space.n,
         input_dims=env.observation_space.shape,
         batch_size=batch_size,
@@ -335,7 +340,7 @@ def grimm_runner(
                 f"\x1B[3m\x1B[34mAccomplished new best score! {best_rew} => {score}\x1B[0m"
             )
             best_rew = score
-            env.unwrapped.record_movie(f"{record_path}/best_{best_rew}.bk2")
+            env.unwrapped.record_movie(f"{record_path}/best_{best_rew}_{tag}.bk2")
             env.reset()
             for act in actions:
                 env.step(act)
