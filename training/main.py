@@ -114,6 +114,7 @@ def main():
     parser.add_argument("--use_custom_integrations", default=False)
     parser.add_argument("--n_games", default=1000)
     parser.add_argument("--play_only", default=False)
+    parser.add_argument("--tag", default=None)
     args = parser.parse_args()
     if args.game == "gradius":
         game = "GradiusIII-Snes"
@@ -173,6 +174,7 @@ def main():
             use_custom_integrations=args.use_custom_integrations == "True",
             model_to_load=args.model_to_load,
             play_only=args.play_only == "True",
+            tag=args.tag,
         )
     else:
         print("\x1B[3mGrimm not recognized\x1B[0m")
