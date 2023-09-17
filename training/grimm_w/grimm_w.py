@@ -2,9 +2,9 @@
 An implementation of the PPO algorithm
 """
 import torch as T
-import grimm_p.actor_critic_network as ACN
+import grimm_w.actor_critic_network as ACN
 import numpy as np
-import grimm_p.replay_buffer as PPO
+import grimm_w.replay_buffer as PPO
 import gym
 import retro
 import time
@@ -154,13 +154,6 @@ class Grimm_Sebastian:
             else observation.__array__()
         )
         state = T.tensor(observation, device=self.actor.device).unsqueeze(0)
-
-        # _, _, action_probs = self.actor.forward(state)
-        # dist = Categorical(action_probs)
-        # action = dist.sample()
-        # logprob = dist.log_prob(action)
-        # value = self.critic.forward(state)
-        # return action.item(), logprob, value
         dist = self.actor(state)
         value = self.critic(state)
         action = dist.sample()
@@ -358,28 +351,3 @@ def grimm_runner(
         )
         # reset the timestep counter
         timesteps = 0
-    # while True:
-    #     actions, rew = sebastian.run()
-    #     counter += 1
-
-    #     timesteps += len(actions)
-    #     print(
-    #         "info: counter={}, timesteps={}, nodes={}, reward={}".format(
-    #             counter, timesteps, johan.node_count, rew
-    #         )
-    #     )
-
-    #     if rew > best_rew:
-    #         print("\x1B[35mnew best reward {} => {}!\x1B[0m".format(best_rew, rew))
-
-    #         best_rew = rew
-
-    #         env.unwrapped.record_movie(f"{record_path}/best_{rew}_at_{timesteps}.bk2")
-    #         env.reset()
-    #         for act in actions:
-    #             env.step(act)
-    #         env.unwrapped.stop_record()
-
-    #     if timesteps > timestep_limit:
-    #         print("timestep limit exceeded")
-    #         break

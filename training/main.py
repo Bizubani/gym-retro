@@ -12,8 +12,8 @@ from utilities.discretizer import (
     DoubleDragonDiscretizer,
     SnesDiscretizer,
 )
-import grimm_x as johan
-import grimm_p.grimm_p as sebastian
+import grimm_j.grimm_j as johan
+import grimm_w.grimm_w as sebastian
 
 # the directory of the script being run
 script_dir = os.path.dirname(os.path.abspath(__file__))
