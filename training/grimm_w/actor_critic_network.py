@@ -14,7 +14,7 @@ class ActorNetwork(nn.Module):
         alpha,
         fc1_dims=512,
         fc2_dims=512,
-        chkpt_dir="./grimm_p/temp/ppo",
+        chkpt_dir="./grimm_w/temp/ppo",
     ):
         c, h, w = input_dims
 
@@ -59,7 +59,7 @@ class ActorNetwork(nn.Module):
         if model_to_load is not None:
             if "actor" not in model_to_load:
                 model_to_load = model_to_load.replace("critic", "actor")
-            self.checkpoint_file = os.path.join("./grimm_p/temp/ppo", model_to_load)
+            self.checkpoint_file = os.path.join("./grimm_w/temp/ppo", model_to_load)
         self.load_state_dict(T.load(self.checkpoint_file))
 
 
@@ -71,7 +71,7 @@ class CriticNetwork(nn.Module):
         alpha,
         fc1_dims=512,
         fc2_dims=512,
-        chkpt_dir="./grimm_p/temp/ppo",
+        chkpt_dir="./grimm_w/temp/ppo",
     ):
         super(CriticNetwork, self).__init__()
         self.checkpoint_file = os.path.join(chkpt_dir, f"critic_{game}_ppo")
@@ -113,5 +113,5 @@ class CriticNetwork(nn.Module):
         if model_to_load is not None:
             if "critic" not in model_to_load:
                 model_to_load = model_to_load.replace("actor", "critic")
-            self.checkpoint_file = os.path.join("./grimm_p/temp/ppo", model_to_load)
+            self.checkpoint_file = os.path.join("./grimm_w/temp/ppo", model_to_load)
         self.load_state_dict(T.load(self.checkpoint_file))
