@@ -22,3 +22,4 @@ pip install torchvision
 
 if you have a compatible GPU, you can install the nvidia cuda toolkit to speed up the training process
 https://developer.nvidia.com/cuda-downloads
+https://nvidia.github.io/cuda-python/install.html
