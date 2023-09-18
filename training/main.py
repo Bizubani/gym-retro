@@ -12,8 +12,8 @@ from utilities.discretizer import (
     DoubleDragonDiscretizer,
     SnesDiscretizer,
 )
-import grimm_j.grimm_j as johan
-import grimm_w.grimm_w as sebastian
+import grimm_j.grimm_j as jacob
+import grimm_w.grimm_w as wilhelm
 
 # the directory of the script being run
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -109,7 +109,7 @@ def main():
     parser.add_argument("--penalty_scale", default=1000)
     parser.add_argument("--episode_steps", default=4500)
     parser.add_argument("--time_step_limit", default=1e7)
-    parser.add_argument("--grimm", default="johan")
+    parser.add_argument("--grimm", default="jacob")
     parser.add_argument("--model_to_load", default=None)
     parser.add_argument("--use_custom_integrations", default=False)
     parser.add_argument("--n_games", default=1000)
@@ -150,8 +150,8 @@ def main():
         extractor = ButtonExtractor(args.file_to_load, action_set)
         loaded_actions = extractor.get_actions_from_movie()
     # call the agent and have it set up itself
-    if args.grimm == "johan":
-        johan.grimm_runner(
+    if args.grimm == "jacob":
+        jacob.grimm_runner(
             game=game,
             state=args.state,
             scenario=args.scenario,
@@ -162,8 +162,8 @@ def main():
             max_episode_steps=int(args.episode_steps),
             timestep_limit=int(float(args.time_step_limit)),
         )
-    elif args.grimm == "sebastian":
-        sebastian.grimm_runner(
+    elif args.grimm == "wilhelm":
+        wilhelm.grimm_runner(
             game=game,
             state=args.state,
             scenario=args.scenario,
