@@ -11,6 +11,9 @@ import time
 from gym.spaces import Box
 from gym.wrappers import FrameStack
 from torchvision import transforms as TV
+import torch.nn.utils as nn_utils
+
+from utilities.logger import Logger
 
 
 class SkipFrame(gym.Wrapper):
@@ -75,7 +78,7 @@ class ResizeObservation(gym.ObservationWrapper):
         return observation
 
 
-class Grimm_Sebastian:
+class Grimm_Wilhelm:
     # class constructor. Receives the environment and the max number of steps
     # optionally receives a list of actions to loaded from a file
     def __init__(
@@ -100,6 +103,17 @@ class Grimm_Sebastian:
         self.N = N
         self.alpha = alpha
         self.n_actions = n_actions
+        self.actor_loss = 0
+        self.critic_loss = 0
+        self.total_loss = 0
+        self.avg_actor_loss = 0
+        self.avg_critic_loss = 0
+        self.avg_total_loss = 0
+        self.top_scores = [
+            -np.inf,
+            -np.inf,
+            -np.inf,
+        ]
 
         self.actor = ACN.ActorNetwork(
             game=game,
@@ -165,10 +179,19 @@ class Grimm_Sebastian:
         return action, probs, value
 
     """
-    Learn from the memory
+1.  Loop through the memory for a specified number of epochs (self.n_epochs).
+2.  For each epoch, fetch the batches of experiences from the memory.
+3.  Calculate the advantages using GAE (Generalized Advantage Estimation) for each time step in the batch.
+4.  Normalize the advantages and convert them, along with values, to tensors.
+5.  Iterates through the batches, and calculate the actor and critic losses, and then perform gradient clipping.
+6.  Accumulated the losses for logging purposes.
+7.  Update the actor and critic networks.
+8.  Finally, after completing all epochs, clear the memory, and average the losses.
     """
 
     def learn(self):
+        # loop through the memory N times
+        # fetching the batches and learning from them
         for _ in range(self.n_epochs):
             (
                 state_arr,
@@ -179,9 +202,13 @@ class Grimm_Sebastian:
                 dones_arr,
                 batches,
             ) = self.memory.generate_batches()
-
+            # assign the last value to the last state
             values = values_arr
+            # and zero out the advantage
             advantage = np.zeros(len(reward_arr), dtype=np.float32)
+            print("Median advantage: ", np.median(advantage))
+            # calculate the Generalized Advantage Estimation for each
+            # time step in this batch
             for t in range(len(reward_arr) - 1):
                 discount = 1
                 advantage_at_time = 0
@@ -193,8 +220,11 @@ class Grimm_Sebastian:
                     )
                     discount *= self.gamma * self.gae_lambda
                 advantage[t] = advantage_at_time
-            advantage = T.tensor(advantage).to(self.actor.device)
 
+            # Now, normalize the calculated advantages
+            advantage = (advantage - np.mean(advantage)) / (np.std(advantage) + 1e-8)
+            # convert all the data to tensors
+            advantage = T.tensor(advantage).to(self.actor.device)
             values = T.tensor(values).to(self.actor.device)
             for batch in batches:
                 states = T.tensor(state_arr[batch], dtype=T.float).to(self.actor.device)
@@ -215,24 +245,48 @@ class Grimm_Sebastian:
                     T.clamp(prob_ratio, 1 - self.clip, 1 + self.clip) * advantage[batch]
                 )
 
-                actor_loss = (
-                    -T.min(weighted_probs, weighted_clipped_probs).mean()
-                    # not in the implementation I followed. Do we need this?
-                    # - 0.001 * dist.entropy().mean()
-                )
+                actor_loss = -T.min(weighted_probs, weighted_clipped_probs).mean()
 
                 returns = advantage[batch] + values[batch]
+
+                # Normalize returns
+                returns = (returns - returns.mean()) / (returns.std() + 1e-8)
                 critic_loss = (returns - critic_value) ** 2
                 critic_loss = critic_loss.mean()
 
                 total_loss = actor_loss + 0.5 * critic_loss
-                # print learning stats
+
+                # Perform gradient clipping for actor and critic networks
+                nn_utils.clip_grad_norm_(self.actor.parameters(), max_norm=0.5)
+                nn_utils.clip_grad_norm_(self.critic.parameters(), max_norm=0.5)
+
+                # keep the loss values for logging
+                self.actor_loss += actor_loss.item()
+                self.critic_loss += critic_loss.item()
+                self.total_loss += total_loss.item()
+
+                # Udpate the actor and critic networks
                 self.actor.optimizer.zero_grad()
                 self.critic.optimizer.zero_grad()
                 total_loss.backward()
                 self.actor.optimizer.step()
                 self.critic.optimizer.step()
+
+        # clear the memory
         self.memory.clear_memory()
+        # calculate the average loss for this episode
+        self.avg_actor_loss = self.actor_loss / self.n_epochs
+        self.avg_critic_loss = self.critic_loss / self.n_epochs
+        self.avg_total_loss = self.total_loss / self.n_epochs
+        # reset the loss values
+        self.actor_loss = 0
+        self.critic_loss = 0
+        self.total_loss = 0
+
+    def update_top_rewards(self, reward):
+        if reward > min(self.top_scores) and reward not in self.top_scores:
+            self.top_scores[self.top_scores.index(min(self.top_scores))] = reward
+            print(f"\x1B[35m\x1B[1m\x1B[3mNew top rewards: {self.top_scores}\x1B[0m")
 
 
 def grimm_runner(
@@ -249,7 +303,7 @@ def grimm_runner(
     tag=None,
 ):
     print(
-        f"\x1B[34m\x1B[3mRunning Sebastian with game {game} and playing {n_games} times with max steps {max_episode_steps} per game"
+        f"\x1B[34m\x1B[3mRunning Wilhelm with game {game} and playing {n_games} times with max steps {max_episode_steps} per game"
         f"\nIt {'is' if use_custom_integrations else 'is not'} using custom integrations\x1B[0m"
     )
     if model_to_load is not None:
@@ -278,7 +332,7 @@ def grimm_runner(
     game_name = game + str(int(time.time()))
     if tag is not None:
         game_name += "_" + tag
-    sebastian = Grimm_Sebastian(
+    wilhelm = Grimm_Wilhelm(
         game=game_name,
         n_actions=env.action_space.n,
         input_dims=env.observation_space.shape,
@@ -295,6 +349,21 @@ def grimm_runner(
     n_steps = 0
     actions = []
 
+    log_headers = [
+        "episode",
+        "score",
+        "avg_score",
+        "avg_actor_loss",
+        "avg_critic_loss",
+        "avg_total_loss",
+    ]
+    logger = Logger(
+        log_dir="./grimm_w/temp/logs/",
+        log_name=f"{game_name}.csv",
+        log_headers=log_headers,
+    )
+    logs = []
+
     timesteps = 0
     best_rew = float("-inf")
     for i in range(n_games):
@@ -306,7 +375,7 @@ def grimm_runner(
         score = 0
         while not done and timesteps < max_episode_steps:
             # set the channel as last dimension
-            action, logprob, value = sebastian.choose_action(observation=observation)
+            action, logprob, value = wilhelm.choose_action(observation=observation)
             actions.append(action)
             n_steps += 1
             timesteps += 1
@@ -318,16 +387,29 @@ def grimm_runner(
             if gym.__version__ > "0.26":
                 env.render()
             score += reward
-            sebastian.remember(observation, action, logprob, value, reward, done)
+            wilhelm.remember(observation, action, logprob, value, reward, done)
             # only run this code if we are teaching the agent
-            if n_steps % sebastian.N == 0 and not play_only:
-                sebastian.learn()
+            if n_steps % wilhelm.N == 0 and not play_only:
+                wilhelm.learn()
                 learn_iters += 1
                 print(
                     f"\x1B[3m\x1B[32mWe are on the {n_steps}th step and have completed {i} episodes.\nSebastain has been trained {learn_iters} times\x1B[0m"
+                    f"\n\x1B[3m\x1B[32mThe average actor loss is {wilhelm.avg_actor_loss} and the average critic loss is {wilhelm.avg_critic_loss}\x1B[0m"
+                    f"\n\x1B[3m\x1B[32mThe average total loss is {wilhelm.avg_total_loss}\x1B[0m"
                 )
             observation = observation_
         score_history.append(score)
+        wilhelm.update_top_rewards(score)
+        logs.append(
+            {
+                "episode": i,
+                "score": score,
+                "avg_score": avg_score,
+                "avg_actor_loss": wilhelm.avg_actor_loss,
+                "avg_critic_loss": wilhelm.avg_critic_loss,
+                "avg_total_loss": wilhelm.avg_total_loss,
+            }
+        )
         if score > best_rew:
             print(
                 f"\x1B[3m\x1B[34mAccomplished new best score! {best_rew} => {score}\x1B[0m"
@@ -342,7 +424,7 @@ def grimm_runner(
         avg_score = np.mean(score_history[-100:])
         if avg_score > best_score:
             print("Saving better models")
-            sebastian.save_models()
+            wilhelm.save_models()
             best_score = avg_score
         actions.clear()
         print(
@@ -351,3 +433,17 @@ def grimm_runner(
         )
         # reset the timestep counter
         timesteps = 0
+
+    print("\x1B[1mtimestep limit exceeded\x1B[0m")
+    print("\x1B[3m\x1B[1mHere are the stats of the execution:\x1B[0m")
+    print(f"\x1B[34m\x1B[3mBest reward: {best_rew}")
+    print(f"Average reward: {avg_score}")
+    print(f"Total timesteps: {n_steps}")
+    print(f"Final epsiode actor loss: {wilhelm.avg_actor_loss}")
+    print(f"Final epsiode critic loss: {wilhelm.avg_critic_loss}")
+    print(f"Final epsiode total loss: {wilhelm.avg_total_loss}")
+    print(f"\x1B[34m\x1B[3mTop scores: {wilhelm.top_scores}\x1B[0m")
+    logger.log(logs)
+    print("\x1B[3m\x1B[1mWriting logs to file!\x1B[0m")
+    logger.close()
+    print("\x1B[3m\x1B[1mDone!\x1B[0m")
