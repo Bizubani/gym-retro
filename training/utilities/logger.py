@@ -18,7 +18,7 @@ class Logger:
         self.log_file.flush()
 
     def log(self, log_data):
-        self.log_writer.writerows(log_data)
+        self.log_writer.writerow(log_data)
         self.log_file.flush()
 
     def close(self):
