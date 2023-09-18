@@ -206,7 +206,6 @@ class Grimm_Wilhelm:
             values = values_arr
             # and zero out the advantage
             advantage = np.zeros(len(reward_arr), dtype=np.float32)
-            print("Median advantage: ", np.median(advantage))
             # calculate the Generalized Advantage Estimation for each
             # time step in this batch
             for t in range(len(reward_arr) - 1):
@@ -356,13 +355,13 @@ def grimm_runner(
         "avg_actor_loss",
         "avg_critic_loss",
         "avg_total_loss",
+        "steps  taken",
     ]
     logger = Logger(
         log_dir="./grimm_w/temp/logs/",
         log_name=f"{game_name}.csv",
         log_headers=log_headers,
     )
-    logs = []
 
     timesteps = 0
     best_rew = float("-inf")
@@ -400,16 +399,16 @@ def grimm_runner(
             observation = observation_
         score_history.append(score)
         wilhelm.update_top_rewards(score)
-        logs.append(
-            {
-                "episode": i,
-                "score": score,
-                "avg_score": avg_score,
-                "avg_actor_loss": wilhelm.avg_actor_loss,
-                "avg_critic_loss": wilhelm.avg_critic_loss,
-                "avg_total_loss": wilhelm.avg_total_loss,
-            }
-        )
+        to_log = {
+            "episode": i,
+            "score": score,
+            "avg_score": avg_score,
+            "avg_actor_loss": wilhelm.avg_actor_loss,
+            "avg_critic_loss": wilhelm.avg_critic_loss,
+            "avg_total_loss": wilhelm.avg_total_loss,
+            "steps  taken": n_steps,
+        }
+
         if score > best_rew:
             print(
                 f"\x1B[3m\x1B[34mAccomplished new best score! {best_rew} => {score}\x1B[0m"
@@ -427,6 +426,7 @@ def grimm_runner(
             wilhelm.save_models()
             best_score = avg_score
         actions.clear()
+        logger.log(to_log)
         print(
             f"\x1B[3mepisode {i} score {score:.1f} average score {avg_score:.1f} best score {best_score:.1f} "
             f"learning_steps {learn_iters}, n_steps {n_steps} and timesteps {timesteps}\x1B[0m"
@@ -443,7 +443,7 @@ def grimm_runner(
     print(f"Final epsiode critic loss: {wilhelm.avg_critic_loss}")
     print(f"Final epsiode total loss: {wilhelm.avg_total_loss}")
     print(f"\x1B[34m\x1B[3mTop scores: {wilhelm.top_scores}\x1B[0m")
-    logger.log(logs)
+
     print("\x1B[3m\x1B[1mWriting logs to file!\x1B[0m")
     logger.close()
     print("\x1B[3m\x1B[1mDone!\x1B[0m")
