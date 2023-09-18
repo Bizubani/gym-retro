@@ -330,7 +330,7 @@ Creates and manages the tree storing game actions and rewards
 """
 
 
-class Grimm_Jocob:
+class Grimm_Jacob:
     # class constructor. Receives the environment and the max number of steps
     # optionally receives a list of actions to loaded from a file
     def __init__(self, env, max_episode_steps, actions=None):
@@ -421,19 +421,19 @@ def grimm_runner(
     env = SkipFrame(env)
     env = TimeLimit(env, max_episode_steps=max_episode_steps)
 
-    johan = Grimm_Jocob(
+    jacob = Grimm_Jacob(
         env, max_episode_steps=max_episode_steps, actions=loaded_actions
     )
     timesteps = 0
     best_rew = float("-inf")
     while True:
-        actions, rew = johan.run()
+        actions, rew = jacob.run()
         counter += 1
 
         timesteps += len(actions)
         print(
             "info: counter={}, timesteps={}, nodes={}, reward={}".format(
-                counter, timesteps, johan.node_count, rew
+                counter, timesteps, jacob.node_count, rew
             )
         )
 
@@ -453,7 +453,7 @@ def grimm_runner(
             print("\x1B[3m\x1B[1mHere are the stats of the execution:\x1B[0m")
             print(f"\x1B[34m\x1B[3mBest reward: {best_rew}")
             print(f"Total timesteps: {timesteps}")
-            print(f"Longest path: {johan.longest_path} steps")
-            print(f"Total nodes: {johan.node_count}")
-            print(f"\x1B[34m\x1B[3mTop scores: {johan.top_scores}\x1B[0m")
+            print(f"Longest path: {jacob.longest_path} steps")
+            print(f"Total nodes: {jacob.node_count}")
+            print(f"\x1B[34m\x1B[3mTop scores: {jacob.top_scores}\x1B[0m")
             break
