@@ -145,9 +145,9 @@ class Grimm_Wilhelm:
     Store the model to file
     """
 
-    def save_models(self):
-        self.actor.save_checkpoint()
-        self.critic.save_checkpoint()
+    def save_models(self, final=False):
+        self.actor.save_checkpoint(final=final)
+        self.critic.save_checkpoint(final=final)
 
     """
     Load the model from file
@@ -325,7 +325,7 @@ def grimm_runner(
     # hyperparameters seleccted using stable baselines implementation settings
     batch_size = 64
     n_epochs = 10
-    alpha = 0.0001
+    alpha = 0.0003
     N = 2048
     n_games = n_games
     game_name = game + str(int(time.time()))
@@ -422,8 +422,9 @@ def grimm_runner(
 
         avg_score = np.mean(score_history[-100:])
         if avg_score > best_score:
-            print("Saving better models")
-            wilhelm.save_models()
+            if not play_only:
+                print("Saving better models")
+                wilhelm.save_models()
             best_score = avg_score
         actions.clear()
         logger.log(to_log)
@@ -434,10 +435,14 @@ def grimm_runner(
         # reset the timestep counter
         timesteps = 0
 
+    # save the final models
+    if not play_only:
+        wilhelm.save_models(final=True)
     print("\x1B[1mtimestep limit exceeded\x1B[0m")
     print("\x1B[3m\x1B[1mHere are the stats of the execution:\x1B[0m")
     print(f"\x1B[34m\x1B[3mBest reward: {best_rew}")
     print(f"Average reward: {avg_score}")
+    print(f"Total episodes: {n_games}")
     print(f"Total timesteps: {n_steps}")
     print(f"Final epsiode actor loss: {wilhelm.avg_actor_loss}")
     print(f"Final epsiode critic loss: {wilhelm.avg_critic_loss}")

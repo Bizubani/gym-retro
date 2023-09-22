@@ -17,7 +17,8 @@ class ActorNetwork(nn.Module):
         chkpt_dir="./grimm_w/temp/ppo",
     ):
         c, h, w = input_dims
-
+        self.chkpt_dir = chkpt_dir
+        self.game = game
         if h != 84:
             raise ValueError(f"Expecting input height: 84, got: {h}")
         if w != 84:
@@ -33,9 +34,9 @@ class ActorNetwork(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(3136, fc1_dims),  # Adjust fc1_dims based on your needs
+            nn.Linear(3136, fc1_dims),
             nn.ReLU(),
-            nn.Linear(fc1_dims, fc2_dims),  # Adjust fc2_dims based on your needs
+            nn.Linear(fc1_dims, fc2_dims),
             nn.ReLU(),
             nn.Linear(fc2_dims, n_actions),
             nn.Softmax(dim=-1),
@@ -51,15 +52,20 @@ class ActorNetwork(nn.Module):
         return dist
 
     # Save the model to file
-    def save_checkpoint(self):
+    def save_checkpoint(self, final=False):
+        if final:
+            self.checkpoint_file = os.path.join(
+                self.chkpt_dir, f"actor_{self.game}_ppo_final"
+            )
+        print(f"Saving checkpoint to {self.checkpoint_file}")
         T.save(self.state_dict(), self.checkpoint_file)
 
     # Load the model from file
     def load_checkpoint(self, model_to_load=None):
         if model_to_load is not None:
-            if "actor" not in model_to_load:
-                model_to_load = model_to_load.replace("critic", "actor")
-            self.checkpoint_file = os.path.join("./grimm_w/temp/ppo", model_to_load)
+            model_to_load = model_to_load.replace("critic", "actor")
+            self.game = model_to_load
+            self.checkpoint_file = os.path.join(self.chkpt_dir, model_to_load)
         self.load_state_dict(T.load(self.checkpoint_file))
 
 
@@ -73,8 +79,11 @@ class CriticNetwork(nn.Module):
         fc2_dims=512,
         chkpt_dir="./grimm_w/temp/ppo",
     ):
+        self.chkpt_dir = chkpt_dir
+        self.game = game
         super(CriticNetwork, self).__init__()
         self.checkpoint_file = os.path.join(chkpt_dir, f"critic_{game}_ppo")
+
         c, h, w = input_dims
 
         if h != 84:
@@ -89,9 +98,9 @@ class CriticNetwork(nn.Module):
             nn.Conv2d(64, 64, kernel_size=3, stride=1),
             nn.ReLU(),
             nn.Flatten(),
-            nn.Linear(3136, fc1_dims),  # Adjust fc1_dims based on your needs
+            nn.Linear(3136, fc1_dims),
             nn.ReLU(),
-            nn.Linear(fc1_dims, fc2_dims),  # Adjust fc2_dims based on your needs
+            nn.Linear(fc1_dims, fc2_dims),
             nn.ReLU(),
             nn.Linear(fc2_dims, 1),
         )
@@ -105,13 +114,18 @@ class CriticNetwork(nn.Module):
         return state
 
     # Save the model to file
-    def save_checkpoint(self):
+    def save_checkpoint(self, final=False):
+        if final:
+            self.checkpoint_file = os.path.join(
+                self.chkpt_dir, f"critic_{self.game}_ppo_final"
+            )
+        print(f"Saving checkpoint to {self.checkpoint_file}")
         T.save(self.state_dict(), self.checkpoint_file)
 
     # Load the model from file
     def load_checkpoint(self, model_to_load=None):
         if model_to_load is not None:
-            if "critic" not in model_to_load:
-                model_to_load = model_to_load.replace("actor", "critic")
-            self.checkpoint_file = os.path.join("./grimm_w/temp/ppo", model_to_load)
+            model_to_load = model_to_load.replace("actor", "critic")
+            self.game = model_to_load
+            self.checkpoint_file = os.path.join(self.chkpt_dir, model_to_load)
         self.load_state_dict(T.load(self.checkpoint_file))
