@@ -10,6 +10,7 @@ from utilities.discretizer import (
     DraculaXDiscretizer,
     FinalFight2Discretizer,
     DoubleDragonDiscretizer,
+    DariusDiscretizer,
     SnesDiscretizer,
 )
 import grimm_j.grimm_j as jacob
@@ -89,6 +90,15 @@ double_dragon_actions = [
     ["A"],
     ["L"],
 ]
+darius_actions = [
+    ["LEFT"],
+    ["RIGHT"],
+    ["UP"],
+    ["DOWN"],
+    ["Y"],
+    ["B"],
+    ["R"],
+]
 
 
 def main():
@@ -96,9 +106,7 @@ def main():
     retro.data.Integrations.add_custom_path(
         os.path.join(script_dir, "integration-tweaks")
     )
-    print(
-        "GradiusIII-Snes" in retro.data.list_games(inttype=retro.data.Integrations.ALL)
-    )
+
     # set up the argument parser and parse the arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("--game", default="GradiusIII-Snes")
@@ -140,6 +148,10 @@ def main():
         game = "CastlevaniaDraculaX-Snes"
         discretizer = DraculaXDiscretizer
         action_set = draculax_actions
+    elif args.game == "darius":
+        game = "DariusForce-Snes"
+        discretizer = DariusDiscretizer
+        action_set = darius_actions
     else:
         print("\x1B[3mGame not recognized\x1B[0m")
         exit(1)
