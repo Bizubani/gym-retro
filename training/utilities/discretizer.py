@@ -73,6 +73,16 @@ double_dragon_actions = [
     ["L"],
 ]
 
+darius_actions = [
+    ["LEFT"],
+    ["RIGHT"],
+    ["UP"],
+    ["DOWN"],
+    ["Y"],
+    ["B"],
+    ["R"],
+]
+
 snes_actions = [
     ["LEFT"],
     ["RIGHT"],
@@ -172,6 +182,16 @@ class DoubleDragonDiscretizer(Discretizer):
 
     def __init__(self, env):
         super().__init__(env=env, combos=double_dragon_actions)
+
+
+class DariusDiscretizer(Discretizer):
+    """
+    Use Darius-specific discrete actions
+    based on https://github.com/openai/retro-baselines/blob/master/agents/sonic_util.py
+    """
+
+    def __init__(self, env):
+        super().__init__(env=env, combos=darius_actions)
 
 
 # provide a unified interface for all snes games
