@@ -10,6 +10,7 @@ import numpy as np
 import math
 import retro
 import gym
+from utilities.logger import Logger
 
 castlevania4_actions = []
 penalty_scale = None
@@ -417,6 +418,18 @@ def grimm_runner(
     env = retro.make(
         game, state, scenario=scenario, inttype=retro.data.Integrations.ALL
     )
+    log_headers = [
+        "episode",
+        "score",
+        "avg_score",
+        "steps  taken",
+    ]
+    score_history = []
+    logger = Logger(
+        log_dir="./grimm_j/logs/",
+        log_name=f"{game}_Jacob.csv",
+        log_headers=log_headers,
+    )
     env = discretizer(env)
     env = SkipFrame(env)
     env = TimeLimit(env, max_episode_steps=max_episode_steps)
@@ -429,12 +442,21 @@ def grimm_runner(
     while True:
         actions, rew = jacob.run()
         counter += 1
-
+        score_history.append(rew)
         timesteps += len(actions)
         print(
             "info: counter={}, timesteps={}, nodes={}, reward={}".format(
                 counter, timesteps, jacob.node_count, rew
             )
+        )
+        avg_score = np.mean(score_history[-100:])
+        logger.log(
+            {
+                "episode": counter,
+                "score": rew,
+                "avg_score": avg_score,
+                "steps  taken": timesteps,
+            }
         )
 
         if rew > best_rew:
@@ -457,3 +479,4 @@ def grimm_runner(
             print(f"Total nodes: {jacob.node_count}")
             print(f"\x1B[34m\x1B[3mTop scores: {jacob.top_scores}\x1B[0m")
             break
+    logger.close()
