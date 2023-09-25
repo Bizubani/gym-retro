@@ -33,8 +33,6 @@ Wilhelm parameters:
 --model_to_load <model to load for wilhelm> --n_games <number of games to run> --play_only <do no learning> --tag <tag the generated files>
 ```
 
-This project is a final project .
-
 ## Installation
 
 To install the project, you need to install the following packages:
