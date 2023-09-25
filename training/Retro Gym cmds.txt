@@ -7,8 +7,8 @@ python -m retro.import /path/to/your/ROMs/directory/
 python -m retro.scripts.playback_movie {bak-file}
 
 # Example commands
-python3 main.py --game gradius --record_path ./storage/Sebastian/agent_r --grimm wilhelm --n_games 500 --tag rGradius --model_to_load actor_GradiusIII_agent_from_RType_ppo --play_only True
+python3 main.py --game gradius --record_path ./storage/Wilhelm/agent_r --grimm wilhelm --n_games 500 --tag rGradius --model_to_load actor_GradiusIII_agent_from_RType_ppo --play_only True
 Wilhelm commands:
-main.py --game gradius --record_path ./storage/Sebastian/gradius/1_life --n_games 4000 --grimm sebastian
+main.py --game gradius --record_path ./storage/Wilhelm/gradius/1_life --n_games 4000 --grimm wilhelm
 Jacob commands:
 main.py --game gradius --record_path ./storage/gradius/lookahead_1life --time_step_limit 1e7 --episode_steps 9000
