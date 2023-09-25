@@ -1,19 +1,14 @@
-The Brothers Grimm
-
-### DEPENDENCIES ###
-pip install gym-retro
-pip install pygad
-pip install gym=0.2.5
-
-
 ### IMPORTING ROMS ###
 To import the roms you want to train the agents on, you need to run the following command:
 python -m retro.import /path/to/your/ROMs/directory/
 
-python watch.py --vid
 
 ### RENDER BAK FILE TO VIDEO ###
 python -m retro.scripts.playback_movie {bak-file}
 
-SNES buttons: ['B', 'Y', 'SELECT', 'START', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'A', 'X', 'L', 'R']
-
+# Example commands
+python3 main.py --game gradius --record_path ./storage/Sebastian/agent_r --grimm wilhelm --n_games 500 --tag rGradius --model_to_load actor_GradiusIII_agent_from_RType_ppo --play_only True
+Wilhelm commands:
+main.py --game gradius --record_path ./storage/Sebastian/gradius/1_life --n_games 4000 --grimm sebastian
+Jacob commands:
+main.py --game gradius --record_path ./storage/gradius/lookahead_1life --time_step_limit 1e7 --episode_steps 9000
