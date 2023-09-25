@@ -1,0 +1,3 @@
+The models included here were involved in cross over training. Basically:
+- the agent that trained to play Gradius was then trained on RType for 1000 episodes which amounted to an extra 1.1 million timesteps
+- the agent that trained to play R-Type was then trained on Gradius for 1250 episodes which amounted to an extra 680000 timesteps.
